@@ -182,10 +182,10 @@ def load_graph_from_csv() -> Optional[Graph]:
     try:
         if fmt == "adj":
             M = csv_loader.read_matrix(fname)
-            return Graph.from_adjacency_matrix(M, [str(i) for i in range(len(M))])
+            return Graph.from_adjacency_matrix(M, [str(i+1) for i in range(len(M))])
         if fmt == "inc":
             M = csv_loader.read_matrix(fname)
-            return Graph.from_incidence_matrix(M, [str(i) for i in range(len(M))])
+            return Graph.from_incidence_matrix(M, [str(i+1) for i in range(len(M))])
         if fmt == "list":
             return Graph.from_adjacency_list(csv_loader.read_adj_list(fname))
         print("Formato não reconhecido (use adj/inc/list).")
@@ -228,7 +228,7 @@ def load_graph_menu() -> Optional[Graph]:
                 print("Digite um inteiro válido.")
                 continue
             M = prompt_matrix(n, n, "matriz")
-            labels = [input(f"rótulo {i} (Enter={i}): ") or str(i) for i in range(n)]
+            labels = [input(f"rótulo {i+1} (Enter={i+1}): ") or str(i) for i in range(n)]
             return Graph.from_adjacency_matrix(M, labels)
         if choice == "3":
             try:
@@ -238,7 +238,7 @@ def load_graph_menu() -> Optional[Graph]:
                 print("Digite inteiros válidos.")
                 continue
             M = prompt_matrix(n, m, "incidência")
-            labels = [input(f"rótulo {i} (Enter={i}): ") or str(i) for i in range(n)]
+            labels = [input(f"rótulo {i+1} (Enter={i+1}): ") or str(i+1) for i in range(n)]
             try:
                 return Graph.from_incidence_matrix(M, labels)
             except ValueError as e:
