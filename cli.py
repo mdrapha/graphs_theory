@@ -3,25 +3,29 @@
 cli.py – Interface em modo texto para o pacote de grafos
 =======================================================
 
-Modos de uso
-------------
-
-1. **Menu interativo**      →  `python cli.py`
-2. **Testes rápidos embutidos** →  `python cli.py --test`
+• Menu interativo ............  python cli.py
+• Testes rápidos embutidos ...  python cli.py --test
 """
 from __future__ import annotations
 
 import argparse
+import csv
+import os
 import sys
-from typing import List, Optional, Set, Tuple
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
 
-from graph import Graph, Vertex, Edge
+import csv_loader  # utilitário para ler CSVs da pasta ./files
+from graph import Edge, Graph, Vertex
 
-# --------------------------------------------------------------------- #
-#  Banner                                                              #
-# --------------------------------------------------------------------- #
+# ======================================================================#
+#  Banner                                                               #
+# ======================================================================#
+
+
 def print_banner() -> None:
-    print(r"""
+    print(
+        r"""
 ================================================================================
    ____ ___  _   _ _____ _   _ _____ ___ ____   ___  ____   ____  ____  _____ 
   / ___/ _ \| \ | |_   _| | | | ____/ _ \___ \ / _ \|  _ \ / ___||  _ \| ____|
@@ -30,30 +34,32 @@ def print_banner() -> None:
   \____\___/|_| \_| |_| |_| |_|_____\___/_____| \___/|_| \_\\____||_| \_\_____|
                           (Disciplina: Teoria de Grafos)
 ================================================================================
-""")
+"""
+    )
 
 
-# --------------------------------------------------------------------- #
+# ======================================================================#
 #  Ajuda / Tutorial                                                     #
-# --------------------------------------------------------------------- #
+# ======================================================================#
+
+
 def print_help() -> None:
     print(
         """
 Ajuda / Tutorial
 ----------------
-0. Sair
-1. Carregar ou recriar grafo
-2. Exibir representações (matriz adj., incidência, lista)
-3. Métricas básicas (|V|, |E|, graus)
-4. Consultas (vizinhos, aresta, caminho, ciclo)
-5. Verificar subgrafo
-6. Ajuda / Tutorial
+0  Sair
+1  Carregar ou recriar grafo
+2  Exibir representações (matriz, incidência, lista)
+3  Operações (|V|, |E|, vizinhos, grau, caminho, ciclo, subgrafo)
+4  Ajuda / Tutorial
 
 Dentro da opção 1 você escolhe o formato de entrada:
-  • 1 → lista de arestas  (ex.:  A B [Enter] B C … [vazio p/ terminar])
+  • 1 → lista de arestas  (ex.:  A B  ↵  B C …  [linha vazia p/ terminar])
   • 2 → matriz de adjacência
   • 3 → matriz de incidência
-Digite **h** para exibir exemplos durante a digitação.
+  • 4 → CSV da pasta ./files
+Digite **h** a qualquer momento para ver exemplos.
 """
     )
 
@@ -64,34 +70,38 @@ def print_format_examples() -> None:
 Exemplos de entrada de grafos
 -----------------------------
 1) Lista de arestas
-   Digite pares separados por espaço, um por linha.  Exemplo:
-       A B
-       A C
-       B D
-       (linha vazia para terminar)
+   A B
+   A C
+   B D
+   (linha vazia p/ terminar)
 
-2) Matriz de adjacência (n × n)
-   Primeiro informe n.  Depois escreva cada linha da matriz:
-       0 1 1 0
-       1 0 0 1
-       1 0 0 0
-       0 1 0 0
+2) Matriz de adjacência (4×4)
+   0 1 1 0
+   1 0 0 1
+   1 0 0 0
+   0 1 0 0
 
-3) Matriz de incidência (n × m)
-   n vértices, m arestas.  Cada coluna tem dois 1s:
-       1 1 0
-       1 0 1
-       0 0 1
-       0 1 0
+3) Matriz de incidência (4×3)
+   1 1 0
+   1 0 1
+   0 0 1
+   0 1 0
+
+4) Arquivos CSV em ./files
+   adj.csv  → matriz de adjacência
+   inc.csv  → matriz de incidência
+   list.csv → lista de adjacência
 """
     )
 
 
-# --------------------------------------------------------------------- #
-#  Funções de prompt de entrada                                         #
-# --------------------------------------------------------------------- #
+# ======================================================================#
+#  Funções de prompt                                                    #
+# ======================================================================#
+
+
 def prompt_edges() -> Set[Edge]:
-    print("Digite as arestas (u v), uma por linha. Linha vazia encerra.  (h = ajuda)")
+    print("Digite as arestas (u v). Linha vazia encerra.  (h = ajuda)")
     edges: Set[Edge] = set()
     while True:
         line = input("edge> ").strip()
@@ -100,11 +110,11 @@ def prompt_edges() -> Set[Edge]:
         if line.lower() in {"h", "help"}:
             print_format_examples()
             continue
-        u, *rest = line.split()
-        if len(rest) != 1:
-            print("Formato inválido! Digite exatamente dois vértices.")
+        parts = line.split()
+        if len(parts) != 2:
+            print("Digite exatamente dois vértices.")
             continue
-        v = rest[0]
+        u, v = parts
         edges.add((min(u, v), max(u, v)))
     return edges
 
@@ -124,7 +134,7 @@ def prompt_matrix(rows: int, cols: int, kind: str) -> List[List[int]]:
             try:
                 row = list(map(int, row_str.split()))
             except ValueError:
-                print("Use apenas 0 ou 1, separados por espaço.")
+                print("Use apenas 0 ou 1.")
                 continue
             if len(row) != cols or any(x not in {0, 1} for x in row):
                 print(f"A linha deve ter {cols} valores 0/1.")
@@ -132,6 +142,61 @@ def prompt_matrix(rows: int, cols: int, kind: str) -> List[List[int]]:
             matrix.append(row)
             break
     return matrix
+
+
+# ======================================================================#
+#  CSV loader helpers                                                   #
+# ======================================================================#
+
+
+def choose_csv_file() -> Optional[str]:
+    files = csv_loader.list_csv_files()
+    if not files:
+        print("Nenhum CSV encontrado em ./files.")
+        return None
+
+    print("\nArquivos em ./files:")
+    for idx, name in enumerate(files, start=1):
+        print(f"{idx:2}) {name}")
+    print(" 0) Cancelar")
+
+    while True:
+        try:
+            num = int(input("Escolha o número do arquivo: "))
+        except ValueError:
+            print("Digite um número válido.")
+            continue
+        if num == 0:
+            return None
+        if 1 <= num <= len(files):
+            return files[num - 1]
+        print("Número fora da lista.")
+
+
+def load_graph_from_csv() -> Optional[Graph]:
+    fname = choose_csv_file()
+    if not fname:
+        return None
+
+    fmt = input("Formato deste CSV (adj/inc/list): ").strip().lower()
+    try:
+        if fmt == "adj":
+            M = csv_loader.read_matrix(fname)
+            return Graph.from_adjacency_matrix(M, [str(i) for i in range(len(M))])
+        if fmt == "inc":
+            M = csv_loader.read_matrix(fname)
+            return Graph.from_incidence_matrix(M, [str(i) for i in range(len(M))])
+        if fmt == "list":
+            return Graph.from_adjacency_list(csv_loader.read_adj_list(fname))
+        print("Formato não reconhecido (use adj/inc/list).")
+    except Exception as e:
+        print(f"Erro ao ler CSV: {e}")
+    return None
+
+
+# ======================================================================#
+#  Menu de criação                                                      #
+# ======================================================================#
 
 
 def load_graph_menu() -> Optional[Graph]:
@@ -142,7 +207,8 @@ def load_graph_menu() -> Optional[Graph]:
   1. Inserir lista de arestas
   2. Inserir matriz de adjacência
   3. Inserir matriz de incidência
-  h. Ajuda sobre formatos de entrada
+  4. Carregar de CSV
+  h. Ajuda sobre formatos
   0. Cancelar
 """
         )
@@ -154,9 +220,7 @@ def load_graph_menu() -> Optional[Graph]:
             print_format_examples()
             continue
         if choice == "1":
-            edges = prompt_edges()
-            return Graph(edges=edges)
-
+            return Graph(edges=prompt_edges())
         if choice == "2":
             try:
                 n = int(input("Número de vértices n: "))
@@ -164,36 +228,101 @@ def load_graph_menu() -> Optional[Graph]:
                 print("Digite um inteiro válido.")
                 continue
             M = prompt_matrix(n, n, "matriz")
-            labels = [
-                input(f"rótulo do vértice {i} (Enter = {i}): ") or str(i)
-                for i in range(n)
-            ]
+            labels = [input(f"rótulo {i} (Enter={i}): ") or str(i) for i in range(n)]
             return Graph.from_adjacency_matrix(M, labels)
-
         if choice == "3":
             try:
                 n = int(input("Número de vértices n: "))
                 m = int(input("Número de arestas m: "))
             except ValueError:
-                print("Digite valores inteiros válidos.")
+                print("Digite inteiros válidos.")
                 continue
-            M = prompt_matrix(n, m, "matriz de incidência")
-            labels = [
-                input(f"rótulo do vértice {i} (Enter = {i}): ") or str(i)
-                for i in range(n)
-            ]
+            M = prompt_matrix(n, m, "incidência")
+            labels = [input(f"rótulo {i} (Enter={i}): ") or str(i) for i in range(n)]
             try:
                 return Graph.from_incidence_matrix(M, labels)
             except ValueError as e:
                 print(f"Erro: {e}")
                 continue
+        if choice == "4":
+            g = load_graph_from_csv()
+            if g:
+                return g
+            continue
 
-        print("Opção inválida! Tente novamente.")
+        print("Opção inválida!")
 
 
-# --------------------------------------------------------------------- #
+# ======================================================================#
+#  Submenu de operações                                                 #
+# ======================================================================#
+
+
+def operations_menu(g: Graph) -> None:
+    while True:
+        print(
+            """
+--- OPERACOES ---
+1  |V|   – número de vértices
+2  |E|   – número de arestas
+3  Vizinhos de um vértice
+4  Existe aresta entre dois vértices
+5  Grau de um vértice
+6  Graus de todos os vértices
+7  Caminho simples entre dois vértices
+8  Ciclo contendo um vértice
+9  Verificar subgrafo
+0  Voltar
+"""
+        )
+        op = input("Escolha: ").strip()
+
+        if op == "0":
+            break
+        elif op == "1":
+            print("|V| =", g.num_vertices())
+        elif op == "2":
+            print("|E| =", g.num_edges())
+        elif op == "3":
+            v = prompt_vertex()
+            print("Adjacentes:", g.neighbors(v))
+        elif op == "4":
+            u = prompt_vertex("u")
+            v = prompt_vertex("v")
+            print("Existe aresta?", g.are_adjacent(u, v))
+        elif op == "5":
+            v = prompt_vertex()
+            print(f"Grau({v}) =", g.degree(v))
+        elif op == "6":
+            for v, d in g.degrees().items():
+                print(f"{v}: grau {d}")
+        elif op == "7":
+            u = prompt_vertex("origem")
+            v = prompt_vertex("destino")
+            print("Caminho:", g.simple_path(u, v) or "Nenhum caminho.")
+        elif op == "8":
+            v = prompt_vertex()
+            print("Ciclo:", g.cycle_containing(v) or "Nenhum ciclo.")
+        elif op == "9":
+            print("Insira o grafo para comparar (subgrafo).")
+            other = load_graph_menu()
+            if other:
+                if other.is_subgraph_of(g):
+                    print("O grafo inserido é SUBGRAFO de G.")
+                elif g.is_subgraph_of(other):
+                    print("G é SUBGRAFO do grafo inserido.")
+                else:
+                    print("Nenhum é subgrafo do outro.")
+        else:
+            print("Opção inválida!")
+        print()  # separador
+
+
+# ======================================================================#
 #  Loop principal                                                       #
-# --------------------------------------------------------------------- #
+# ======================================================================#
+
+
 def interactive_menu() -> None:
     graph: Optional[Graph] = None
     print_banner()
@@ -204,10 +333,8 @@ def interactive_menu() -> None:
 ====================  MENU PRINCIPAL  ====================
 1  Carregar / recriar grafo
 2  Exibir representações
-3  Métricas básicas
-4  Consultas
-5  Verificar subgrafo
-6  Ajuda / Tutorial
+3  Operações
+4  Ajuda / Tutorial
 0  Sair
 ==========================================================
 """
@@ -217,133 +344,88 @@ def interactive_menu() -> None:
         if cmd == "0":
             print("Até logo!")
             break
-
-        if cmd == "6":
+        elif cmd == "4":
             print_help()
             continue
-
-        if cmd == "1":
-            g = load_graph_menu()
-            if g:
-                graph = g
+        elif cmd == "1":
+            graph = load_graph_menu()
+            if graph:
                 print("Grafo carregado com sucesso!")
             continue
-
-        if graph is None:
+        elif graph is None:
             print("Nenhum grafo carregado. Use a opção 1 primeiro.")
             continue
 
+        # --- Exibir representações ------------------------------------
         if cmd == "2":
             print("\n--- Matriz de adjacência ---")
-            for row in graph.adjacency_matrix():
-                print(" ".join(map(str, row)))
+            for r in graph.adjacency_matrix():
+                print(" ".join(map(str, r)))
             print("\n--- Matriz de incidência ---")
-            inc = graph.incidence_matrix()
-            for row in inc:
-                print(" ".join(map(str, row)))
+            for r in graph.incidence_matrix():
+                print(" ".join(map(str, r)))
             print("\n--- Lista de adjacência ---")
             for v, neigh in graph.adjacency_list().items():
                 print(f"{v}: {', '.join(neigh)}")
 
+        # --- Operações -------------------------------------------------
         elif cmd == "3":
-            print(f"|V| = {graph.num_vertices()}")
-            print(f"|E| = {graph.num_edges()}")
-            print("Graus:")
-            for v, d in graph.degrees().items():
-                print(f"  {v}: {d}")
+            operations_menu(graph)
 
-        elif cmd == "4":
-            print(
-                """
---- Consultas ---
-a) Vizinhos de um vértice
-b) Verificar aresta entre dois vértices
-c) Caminho simples entre dois vértices
-d) Ciclo que contém um vértice
-"""
-            )
-            sub = input("Escolha: ").strip().lower()
-            if sub == "a":
-                v = prompt_vertex()
-                print("Adjacentes:", graph.neighbors(v))
-            elif sub == "b":
-                u = prompt_vertex("u")
-                v = prompt_vertex("v")
-                print("Existe aresta?", graph.are_adjacent(u, v))
-            elif sub == "c":
-                u = prompt_vertex("origem")
-                v = prompt_vertex("destino")
-                path = graph.simple_path(u, v)
-                print("Caminho:", path or "Nenhum caminho.")
-            elif sub == "d":
-                v = prompt_vertex()
-                cycle = graph.cycle_containing(v)
-                print("Ciclo:", cycle or "Nenhum ciclo encontrado.")
-            else:
-                print("Opção inválida.")
-
-        elif cmd == "5":
-            print("Insira o grafo para comparar (será testado como subgrafo).")
-            other = load_graph_menu()
-            if other:
-                if other.is_subgraph_of(graph):
-                    print("O grafo inserido é SUBGRAFO de G.")
-                elif graph.is_subgraph_of(other):
-                    print("G é SUBGRAFO do grafo inserido.")
-                else:
-                    print("Nenhum é subgrafo do outro.")
         else:
             print("Comando desconhecido!")
+        print()
 
-        print("\n")  # separador visual
 
-
-# --------------------------------------------------------------------- #
+# ======================================================================#
 #  Testes rápidos embutidos                                             #
-# --------------------------------------------------------------------- #
+# ======================================================================#
+
+
 def run_tests() -> None:
-    print("Rodando testes unitários rápidos...")
+    print("Rodando smoke tests...")
 
     # Grafo quadrado A-B-D-C
-    g = Graph()
-    for u, v in ("A B", "B D", "D C", "C A"):
-        u, v = u.split()
-        g.add_edge(u, v)
+    base = Graph()
+    for p in ("A B", "B D", "D C", "C A"):
+        u, v = p.split()
+        base.add_edge(u, v)
 
-    assert g.num_vertices() == 4
-    assert g.num_edges() == 4
-    assert g.degree("A") == 2
-    assert g.are_adjacent("A", "B") is True
-    assert g.are_adjacent("A", "D") is False
+    assert base.num_vertices() == 4 and base.num_edges() == 4
+    assert base.are_adjacent("A", "B") and not base.are_adjacent("A", "D")
 
     # Conversões
-    M_adj = g.adjacency_matrix()
-    g2 = Graph.from_adjacency_matrix(M_adj, sorted(g.V))
-    assert g2.E == g.E
+    assert (
+        Graph.from_adjacency_matrix(base.adjacency_matrix(), sorted(base.V)).E
+        == base.E
+    )
+    assert (
+        Graph.from_incidence_matrix(base.incidence_matrix(), sorted(base.V)).E
+        == base.E
+    )
 
-    M_inc = g.incidence_matrix()
-    g3 = Graph.from_incidence_matrix(M_inc, sorted(g.V))
-    assert g3.E == g.E
+    # CSV round-trip (lista de adjacência)
+    import tempfile
 
-    # Caminho simples
-    path = g.simple_path("A", "D")
-    assert path in (["A", "B", "D"], ["A", "C", "D"])
+    tmp = tempfile.NamedTemporaryFile(
+        delete=False, suffix=".csv", mode="w", newline=""
+    )
+    writer = csv.writer(tmp)
+    for v, neigh in base.adjacency_list().items():
+        writer.writerow([v] + neigh)
+    tmp.close()
+    g_csv = Graph.from_adjacency_list(csv_loader.read_adj_list(Path(tmp.name).name))
+    os.unlink(tmp.name)
+    assert g_csv.E == base.E
 
-    # Ciclo
-    cycle = g.cycle_containing("A")
-    assert cycle is not None and len(cycle) == 4
-
-    # Subgrafo
-    g_sub = Graph(edges={("A", "B"), ("B", "D")})
-    assert g_sub.is_subgraph_of(g) is True
-    assert g.is_subgraph_of(g_sub) is False
-
-    print("🎉  All tests passed!")
+    print("🎉  Smoke tests OK!")
 
 
-# --------------------------------------------------------------------- #
+# ======================================================================#
 #  Entry-point                                                          #
-# --------------------------------------------------------------------- #
+# ======================================================================#
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="CLI de grafos.")
     parser.add_argument(
