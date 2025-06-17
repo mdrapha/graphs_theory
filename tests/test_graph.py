@@ -8,7 +8,7 @@ Execute na raiz do projeto:
     pytest                       # roda todos os testes
     pytest -q                    # saída resumida
 """
-import pytest
+import pytest  # type: ignore
 
 from graph import Graph
 
@@ -104,3 +104,26 @@ def test_subgraph(square_graph: Graph):
     sub = Graph(edges={("A", "B"), ("B", "D")})
     assert sub.is_subgraph_of(g) is True
     assert g.is_subgraph_of(sub) is False
+
+
+def test_is_connected_and_eulerian(square_graph: Graph):
+    g = square_graph
+    assert g.is_connected() is True
+    assert g.is_eulerian() is True  # todos os vértices grau 2
+
+
+def test_intersection(square_graph: Graph):
+    g1 = square_graph
+    g2 = Graph(edges={("A", "B"), ("B", "D"), ("X", "Y")})
+    inter = g1.intersection(g2)
+    assert inter.E == {("A", "B"), ("B", "D")}
+    # vértices incidentes devem estar presentes
+    assert inter.V == {"A", "B", "D"}
+
+
+def test_hamiltonian_cycle(square_graph: Graph):
+    g = square_graph
+    cycle = g.hamiltonian_cycle()
+    assert cycle is not None
+    assert cycle[0] == cycle[-1]  # ciclo fechado
+    assert set(cycle[:-1]) == g.V  # cobre todos vértices

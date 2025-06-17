@@ -274,6 +274,14 @@ def operations_menu(g: Graph) -> None:
 7  Caminho simples entre dois vértices
 8  Ciclo contendo um vértice
 9  Verificar subgrafo
+10  União com outro grafo
+11  Intersecção com outro grafo
+12  Diferença simétrica com outro grafo
+13  Gerar grafo sem um vértice
+14  Gerar grafo sem uma aresta
+15  Fundir dois vértices
+16  Verificar se é Euleriano
+17  Procurar ciclo Hamiltoniano
 0  Voltar
 """
         )
@@ -315,6 +323,69 @@ def operations_menu(g: Graph) -> None:
                     print("G é SUBGRAFO do grafo inserido.")
                 else:
                     print("Nenhum é subgrafo do outro.")
+        elif op == "10":
+            print("Insira o segundo grafo para UNIÃO.")
+            other = load_graph_menu()
+            if other:
+                res = g.union(other)
+                print("Grafo resultante (lista de adjacência):")
+                for vtx, neigh in res.adjacency_list().items():
+                    print(f"{vtx}: {', '.join(neigh)}")
+        elif op == "11":
+            print("Insira o segundo grafo para INTERSECÇÃO.")
+            other = load_graph_menu()
+            if other:
+                res = g.intersection(other)
+                print("Grafo resultante (lista de adjacência):")
+                for vtx, neigh in res.adjacency_list().items():
+                    print(f"{vtx}: {', '.join(neigh)}")
+        elif op == "12":
+            print("Insira o segundo grafo para DIFERENÇA SIMÉTRICA.")
+            other = load_graph_menu()
+            if other:
+                res = g.symmetric_difference(other)
+                print("Grafo resultante (lista de adjacência):")
+                for vtx, neigh in res.adjacency_list().items():
+                    print(f"{vtx}: {', '.join(neigh)}")
+        elif op == "13":
+            v_del = prompt_vertex("vértice a remover")
+            try:
+                res = g.without_vertex(v_del)
+                print("Grafo resultante (lista de adjacência):")
+                for vtx, neigh in res.adjacency_list().items():
+                    print(f"{vtx}: {', '.join(neigh)}")
+            except ValueError as e:
+                print(e)
+        elif op == "14":
+            u = prompt_vertex("u")
+            v = prompt_vertex("v")
+            try:
+                res = g.without_edge(u, v)
+                print("Grafo resultante (lista de adjacência):")
+                for vtx, neigh in res.adjacency_list().items():
+                    print(f"{vtx}: {', '.join(neigh)}")
+            except ValueError as e:
+                print(e)
+        elif op == "15":
+            v1 = prompt_vertex("vértice 1")
+            v2 = prompt_vertex("vértice 2")
+            try:
+                res = g.merge_vertices(v1, v2)
+                print("Grafo resultante (lista de adjacência):")
+                for vtx, neigh in res.adjacency_list().items():
+                    print(f"{vtx}: {', '.join(neigh)}")
+            except ValueError as e:
+                print(e)
+        elif op == "16":
+            if g.is_eulerian():
+                print("O grafo é Euleriano.")
+            else:
+                print("O grafo não é Euleriano.")
+        elif op == "17":
+            if g.has_hamiltonian_cycle():
+                print("O grafo tem um ciclo Hamiltoniano.")
+            else:
+                print("O grafo não tem um ciclo Hamiltoniano.")
         else:
             print("Opção inválida!")
         print()  # separador

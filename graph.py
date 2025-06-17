@@ -218,3 +218,123 @@ class Graph:
         return f"Graph(V={sorted(self.V)}, E={sorted(self.E)})"
 
     __repr__ = __str__
+
+    def union(self, other: "Graph") -> "Graph":
+        """Retorna um *novo* grafo G = self ∪ other (união de vértices e arestas)."""
+        V = self.V.union(other.V)
+        E = self.E.union(other.E)
+        return Graph(vertices=V, edges=E)
+
+    def intersection(self, other: "Graph") -> "Graph":
+        """Retorna um *novo* grafo contendo apenas vértices e arestas presentes em ambos."""
+        V_common = self.V.intersection(other.V)
+        # Mantém somente arestas que aparecem em ambos *e* cujos vértices estão no conjunto comum
+        E_common = {e for e in self.E.intersection(other.E) if e[0] in V_common and e[1] in V_common}
+        return Graph(vertices=V_common, edges=E_common)
+
+    def symmetric_difference(self, other: "Graph") -> "Graph":
+        """Retorna um *novo* grafo com a diferença simétrica (arestas em exatamente um dos grafos)."""
+        V = self.V.union(other.V)
+        E = self.E.symmetric_difference(other.E)
+        # Garante inclusão de vértices incidentes às arestas resultantes
+        verts_in_edges = {v for edge in E for v in edge}
+        V.update(verts_in_edges)
+        return Graph(vertices=V, edges=E)
+
+    # ------------------------------------------------------------------ #
+    #  Transformações que removem / fundem elementos                     #
+    # ------------------------------------------------------------------ #
+    def without_vertex(self, v: Vertex) -> "Graph":
+        """Retorna um *novo* grafo sem o vértice *v* (e sem arestas incidentes)."""
+        self._ensure_vertex(v)
+        V = self.V - {v}
+        E = {e for e in self.E if v not in e}
+        return Graph(vertices=V, edges=E)
+
+    def without_edge(self, u: Vertex, v: Vertex) -> "Graph":
+        """Retorna um *novo* grafo sem a aresta (u, v)."""
+        self._ensure_vertex(u)
+        self._ensure_vertex(v)
+        e = (min(u, v), max(u, v))
+        if e not in self.E:
+            raise ValueError(f"Aresta {e} não pertence ao grafo.")
+        E = self.E - {e}
+        return Graph(vertices=set(self.V), edges=E)
+
+    def merge_vertices(self, v1: Vertex, v2: Vertex) -> "Graph":
+        """Funde *v1* e *v2* num único vértice (mantém o rótulo de v1)."""
+        self._ensure_vertex(v1)
+        self._ensure_vertex(v2)
+        new_V = self.V - {v2}
+        new_edges: Set[Edge] = set()
+        for a, b in self.E:
+            a_new = v1 if a in {v1, v2} else a
+            b_new = v1 if b in {v1, v2} else b
+            if a_new == b_new:
+                continue  # evita laço
+            new_edges.add((min(a_new, b_new), max(a_new, b_new)))
+        return Graph(vertices=new_V, edges=new_edges)
+
+    # ------------------------------------------------------------------ #
+    #  Conectividade / Euler / Hamilton                                #
+    # ------------------------------------------------------------------ #
+    def _non_isolated_vertices(self) -> Set[Vertex]:
+        """Conjunto de vértices com grau > 0."""
+        return {v for v, neigh in self.adj.items() if neigh}
+
+    def is_connected(self) -> bool:
+        """Verifica se o grafo é conectado (ignorando vértices isolados)."""
+        if not self.V:
+            return True
+        non_iso = self._non_isolated_vertices()
+        if not non_iso:
+            return True  # sem arestas → considera conectado
+        start = next(iter(non_iso))
+        visited: Set[Vertex] = set()
+        stack = [start]
+        while stack:
+            u = stack.pop()
+            if u in visited:
+                continue
+            visited.add(u)
+            stack.extend([w for w in self.adj[u] if w not in visited])
+        return visited == non_iso
+
+    def is_eulerian(self) -> bool:
+        """Retorna True se o grafo possuir circuito Euleriano."""
+        if not self.is_connected():
+            return False
+        return all(len(self.adj[v]) % 2 == 0 for v in self._non_isolated_vertices())
+
+    def hamiltonian_cycle(self) -> Optional[List[Vertex]]:
+        """Tenta encontrar um ciclo Hamiltoniano.  Retorna lista de vértices (com repetição do primeiro no fim) ou None."""
+        n = len(self.V)
+        if n == 0:
+            return []
+        start = sorted(self.V)[0]
+        path: List[Vertex] = [start]
+        visited: Set[Vertex] = {start}
+
+        def backtrack(u: Vertex) -> bool:
+            if len(path) == n:
+                if start in self.adj[u]:
+                    path.append(start)
+                    return True
+                return False
+            for w in sorted(self.adj[u]):
+                if w not in visited:
+                    visited.add(w)
+                    path.append(w)
+                    if backtrack(w):
+                        return True
+                    visited.remove(w)
+                    path.pop()
+            return False
+
+        if backtrack(start):
+            return path
+        return None
+
+    def has_hamiltonian_cycle(self) -> bool:
+        """Atalho booleano para existência de ciclo Hamiltoniano."""
+        return self.hamiltonian_cycle() is not None
