@@ -14,6 +14,7 @@ Exporta:
 """
 from __future__ import annotations
 
+import copy
 from typing import Dict, List, Optional, Set, Tuple
 
 __all__ = ["Vertex", "Edge", "Graph"]
@@ -338,3 +339,49 @@ class Graph:
     def has_hamiltonian_cycle(self) -> bool:
         """Atalho booleano para existência de ciclo Hamiltoniano."""
         return self.hamiltonian_cycle() is not None
+
+    # ------------------------------------------------------------------ #
+    #  Árvores                                                           #
+    # ------------------------------------------------------------------ #
+    
+    def is_tree(self) -> bool:
+        if not self.V: # Grafo vazio não é árvore
+            return False
+        
+        # Um grafo com n vértices é uma árvore se for conectado e tiver n-1 arestas.
+        is_conn = self.is_connected()
+        has_correct_edges = self.num_edges() == self.num_vertices() - 1
+        
+        return is_conn and has_correct_edges
+
+    def find_centers(self) -> List[Vertex]:
+        if not self.is_tree():
+            raise ValueError("O grafo não é uma árvore. Centros são definidos apenas para árvores.")
+
+        g_copy = copy.deepcopy(self)
+        
+        n = g_copy.num_vertices()
+        if n <= 2:
+            return sorted(list(g_copy.V))
+
+        leaves = {v for v in g_copy.V if g_copy.degree(v) == 1}
+
+        while n > 2:
+            n -= len(leaves)
+            
+            # Remove as folhas atuais
+            next_leaves = set()
+            for leaf in leaves:
+                # O único vizinho da folha
+                neighbor = g_copy.adj[leaf][0]
+                
+                # Remove a folha do grafo (e arestas incidentes)
+                g_copy = g_copy.without_vertex(leaf)
+
+                # Se o vizinho se tornou uma nova folha, adiciona à lista da próxima iteração
+                if g_copy.degree(neighbor) == 1:
+                    next_leaves.add(neighbor)
+            
+            leaves = next_leaves
+
+        return sorted(list(g_copy.V))

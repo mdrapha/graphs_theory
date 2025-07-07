@@ -282,6 +282,8 @@ def operations_menu(g: Graph) -> None:
 15  Fundir dois vértices
 16  Verificar se é Euleriano
 17  Procurar ciclo Hamiltoniano
+18  Verificar se é uma ÁRVORE
+19  Encontrar CENTRO(S) da árvore
 0  Voltar
 """
         )
@@ -386,6 +388,20 @@ def operations_menu(g: Graph) -> None:
                 print("O grafo tem um ciclo Hamiltoniano.")
             else:
                 print("O grafo não tem um ciclo Hamiltoniano.")
+        elif op == "18":
+            if g.is_tree():
+                print("Sim, o grafo é uma árvore.")
+            else:
+                print("Não, o grafo não é uma árvore.")
+        elif op == "19":
+            try:
+                centers = g.find_centers()
+                if len(centers) == 1:
+                    print(f"O centro da árvore é: {centers[0]}")
+                else:
+                    print(f"Os centros da árvore são: {', '.join(centers)}")
+            except ValueError as e:
+                print(f"Erro: {e}")
         else:
             print("Opção inválida!")
         print()  # separador
