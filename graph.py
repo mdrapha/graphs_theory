@@ -418,5 +418,91 @@ class Graph:
         ecc = self.vertex_eccentricities()
         return min(ecc.values())
 
+    # ------------------------------------------------------------------ #
+    #  Exercício 8 – Distância entre duas árvores A1 e A2 em G          #
+    # ------------------------------------------------------------------ #
+
+    def _min_distance_between_sets(self, S1: Set[Vertex], S2: Set[Vertex]) -> Optional[int]:
+        """Retorna a menor distância entre qualquer vértice de S1 e qualquer vértice de S2.
+        Se não existir caminho retorna None."""
+        if not S1 or not S2:
+            return None
+        # BFS multi-origem a partir de S1
+        visited: Dict[Vertex, int] = {}
+        queue: List[Vertex] = []
+        for v in S1:
+            self._ensure_vertex(v)
+            visited[v] = 0
+            queue.append(v)
+        while queue:
+            u = queue.pop(0)
+            if u in S2:
+                return visited[u]
+            for w in self.adj[u]:
+                if w not in visited:
+                    visited[w] = visited[u] + 1
+                    queue.append(w)
+        return None  # conjuntos desconexos
+
+    def distance_between_trees(self, A1: "Graph", A2: "Graph") -> Optional[int]:
+        """Calcula a menor distância entre as árvores A1 e A2 consideradas subgrafos de G.
+        A distância é o menor número de arestas num caminho que liga qualquer vértice de A1
+        a qualquer vértice de A2 dentro do grafo *self*.
+        Retorna None se não houver caminho entre elas."""
+        # Garante que as árvores estejam contidas em G
+        if not A1.is_subgraph_of(self) or not A2.is_subgraph_of(self):
+            raise ValueError("As árvores devem ser subgrafos de G.")
+        return self._min_distance_between_sets(A1.V, A2.V)
+
+    # ------------------------------------------------------------------ #
+    #  Exercício 9 – Árvore central de um grafo                         #
+    # ------------------------------------------------------------------ #
+
+    def _eccentricities_general(self) -> Dict[Vertex, int]:
+        """Excentricidade de cada vértice (funciona para qualquer grafo conectado)."""
+        if not self.is_connected():
+            raise ValueError("O grafo deve ser conectado para calcular excentricidades.")
+
+        def bfs(source: Vertex) -> int:
+            dist: Dict[Vertex, int] = {source: 0}
+            queue: List[Vertex] = [source]
+            while queue:
+                u = queue.pop(0)
+                for w in self.adj[u]:
+                    if w not in dist:
+                        dist[w] = dist[u] + 1
+                        queue.append(w)
+            if len(dist) != len(self.V):
+                # Grafo desconexo (não deveria acontecer após verificação)
+                return float("inf")
+            return max(dist.values())
+
+        return {v: bfs(v) for v in self.V}
+
+    def central_tree(self) -> "Graph":
+        """Gera uma *árvore central* de G: uma árvore geradora de altura mínima.
+        Construída via BFS enraizado em um vértice centro do grafo."""
+        if not self.is_connected():
+            raise ValueError("O grafo deve ser conectado para possuir árvore central.")
+
+        ecc = self._eccentricities_general()
+        min_ecc = min(ecc.values())
+        centers = [v for v, e in ecc.items() if e == min_ecc]
+        root = sorted(centers)[0]  # escolha determinística
+
+        # BFS para construir árvore
+        tree_edges: Set[Edge] = set()
+        visited: Set[Vertex] = {root}
+        queue: List[Vertex] = [root]
+        parent: Dict[Vertex, Vertex] = {}
+        while queue:
+            u = queue.pop(0)
+            for w in self.adj[u]:
+                if w not in visited:
+                    visited.add(w)
+                    parent[w] = u
+                    tree_edges.add((min(u, w), max(u, w)))
+                    queue.append(w)
+        return Graph(vertices=set(self.V), edges=tree_edges)
 
     

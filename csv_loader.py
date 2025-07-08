@@ -56,6 +56,25 @@ def list_csv_files(limit: int = 15) -> List[str]:
     return sorted(f.name for f in BASE_DIR.glob("*.csv"))[:limit]
 
 
+def _detect_delimiter(sample: str) -> str:
+    """Tenta descobrir delimitador entre vírgula e ponto-e-vírgula.
+
+    1. Usa csv.Sniffer se possível.
+    2. Caso falhe (ValueError), decide com base em qual caractere aparece mais.
+    3. Fallback final = vírgula.
+    """
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters=",;")
+        return dialect.delimiter
+    except csv.Error:
+        # Heurística simples
+        comma = sample.count(",")
+        semi = sample.count(";")
+        if semi > comma:
+            return ";"
+        return ","
+
+
 def read_matrix(name: str) -> List[List[int]]:
     """
     Lê *name* (CSV) como matriz de 0/1. Aceita vírgula ou ponto-e-vírgula.
@@ -70,8 +89,8 @@ def read_matrix(name: str) -> List[List[int]]:
     with path.open(newline="") as fh:
         sample = fh.read(1024)
         fh.seek(0)
-        dialect = csv.Sniffer().sniff(sample, delimiters=",;")
-        reader = csv.reader(fh, dialect)
+        delim = _detect_delimiter(sample)
+        reader = csv.reader(fh, delimiter=delim)
         matrix: List[List[int]] = []
         for row in reader:
             if not row:  # ignora linhas vazias
@@ -106,8 +125,8 @@ def read_adj_list(name: str) -> Dict[str, List[str]]:
     with path.open(newline="") as fh:
         sample = fh.read(1024)
         fh.seek(0)
-        dialect = csv.Sniffer().sniff(sample, delimiters=",;")
-        reader = csv.reader(fh, dialect)
+        delim = _detect_delimiter(sample)
+        reader = csv.reader(fh, delimiter=delim)
         adj: Dict[str, List[str]] = {}
         for row in reader:
             if not row:
