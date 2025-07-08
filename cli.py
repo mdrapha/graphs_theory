@@ -274,18 +274,20 @@ def operations_menu(g: Graph) -> None:
 7  Caminho simples entre dois vértices
 8  Ciclo contendo um vértice
 9  Verificar subgrafo
-10  União com outro grafo
-11  Intersecção com outro grafo
-12  Diferença simétrica com outro grafo
-13  Gerar grafo sem um vértice
-14  Gerar grafo sem uma aresta
-15  Fundir dois vértices
-16  Verificar se é Euleriano
-17  Procurar ciclo Hamiltoniano
-18  Verificar se é uma ÁRVORE
-19  Encontrar CENTRO(S) da árvore
+10 União com outro grafo
+11 Intersecção com outro grafo
+12 Diferença simétrica com outro grafo
+13 Gerar grafo sem um vértice
+14 Gerar grafo sem uma aresta
+15 Fundir dois vértices
+16 Verificar se é Euleriano
+17 Procurar ciclo Hamiltoniano
+18 Verificar se é uma ÁRVORE
+19 Encontrar CENTRO(S) da árvore
 20 Calcular excentricidade dos vértices da árvore
 21 Determinar raio da árvore
+22 Verificar se A1 é uma árvore subgrafo de G
+23 Verificar se A1 é uma árvore de abrangência de G
 0  Voltar
 """
         )
@@ -418,6 +420,22 @@ def operations_menu(g: Graph) -> None:
                 print(f"Raio da árvore: {r}")
             except ValueError as e:
                 print(f"Erro: {e}")
+        elif op == "22":
+            print("Insira a árvore A1 para verificar se é subgrafo de G.")
+            a1 = load_graph_menu()
+            if a1:
+                if g.is_subgraph_tree(a1):
+                    print("Sim, A1 é uma árvore que é subgrafo de G.")
+                else:
+                    print("Não, A1 não é uma árvore que é subgrafo de G.")
+        elif op == "23":
+            print("Insira a árvore A1 para verificar se é uma árvore de abrangência de G.")
+            a1 = load_graph_menu()
+            if a1:
+                if g.is_spanning_tree(a1):
+                    print("Sim, A1 é uma árvore de abrangência de G.")
+                else:
+                    print("Não, A1 não é uma árvore de abrangência de G.")
         else:
             print("Opção inválida!")
         print()  # separador
