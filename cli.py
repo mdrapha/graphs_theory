@@ -455,7 +455,6 @@ def operations_menu(g: Graph) -> None:
                     print(f"{vtx}: {', '.join(neigh)}")
             except ValueError as e:
                 print(f"Erro: {e}")
-
         elif op == "24":
             print("Insira a árvore A1 para verificar se é subgrafo de G.")
             a1 = load_graph_menu()
@@ -498,6 +497,7 @@ def interactive_menu() -> None:
 2  Exibir representações
 3  Operações
 4  Ajuda / Tutorial
+5  Salvar PNG do grafo carregado
 0  Sair
 ==========================================================
 """
@@ -515,6 +515,22 @@ def interactive_menu() -> None:
             graph = load_graph_menu()
             if graph:
                 print("Grafo carregado com sucesso!")
+                input("\nPressione Enter para voltar ao menu...")
+            continue
+        elif cmd == "5":
+            if graph is None:
+                print("Nenhum grafo carregado. Use a opção 1 primeiro.")
+                input("\nPressione Enter para voltar ao menu...")
+                continue
+            fname = input("Nome do arquivo PNG (Enter=grafo.png): ").strip() or "grafo.png"
+            try:
+                graph.draw(fname)
+                print(f"Imagem salva em {fname}")
+            except ImportError:
+                print("Instale 'networkx' e 'matplotlib' (pip install networkx matplotlib) para gerar imagens.")
+            except Exception as e:
+                print(f"Erro ao gerar imagem: {e}")
+            input("\nPressione Enter para voltar ao menu...")
             continue
         elif graph is None:
             print("Nenhum grafo carregado. Use a opção 1 primeiro.")

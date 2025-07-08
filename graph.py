@@ -525,3 +525,59 @@ class Graph:
             return False
         
         return self.V == tree_a1.V
+
+    # ------------------------------------------------------------------ #
+    #  Exportação visual                                                 #
+    # ------------------------------------------------------------------ #
+
+    def draw(self, filename: str = "grafo.png", layout: str = "spring") -> None:
+        """Gera uma imagem PNG do grafo usando *networkx* + *matplotlib*.
+
+        Parameters
+        ----------
+        filename : str
+            Nome do arquivo PNG a ser salvo.
+        layout : str
+            Algoritmo de posicionamento ("spring", "circular", "kamada_kawai", etc.).
+
+        Raises
+        ------
+        ImportError
+            Se *networkx* ou *matplotlib* não estiverem instalados.
+        """
+
+        try:
+            import networkx as nx  # type: ignore
+            import matplotlib.pyplot as plt  # type: ignore
+        except ImportError as e:
+            raise ImportError(
+                "Para gerar imagens, instale as dependências: networkx e matplotlib"
+            ) from e
+
+        Gnx = nx.Graph()
+        Gnx.add_nodes_from(self.V)
+        Gnx.add_edges_from(self.E)
+
+        # Escolhe layout
+        layout_funcs = {
+            "spring": nx.spring_layout,
+            "circular": nx.circular_layout,
+            "kamada_kawai": nx.kamada_kawai_layout,
+            "shell": nx.shell_layout,
+        }
+        pos = layout_funcs.get(layout, nx.spring_layout)(Gnx)
+
+        plt.figure(figsize=(6, 4))
+        nx.draw(
+            Gnx,
+            pos,
+            with_labels=True,
+            node_color="#ffcc00",
+            edge_color="#444444",
+            node_size=700,
+            font_size=10,
+        )
+        plt.axis("off")
+        plt.tight_layout()
+        plt.savefig(filename, dpi=300, bbox_inches="tight")
+        plt.close()
