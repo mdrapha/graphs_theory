@@ -294,8 +294,9 @@ def operations_menu(g: Graph) -> None:
 21 Determinar raio da árvore
 22 Distância ENTRE duas ÁRVORES do grafo
 23 Gerar ÁRVORE CENTRAL do grafo
-24 Verificar se A1 é uma árvore subgrafo de G
-25 Verificar se A1 é uma árvore de abrangência de G
+24 Gerar Árvore de Abrangência do grafo
+25 Verificar se A1 é uma árvore subgrafo de G
+26 Verificar se A1 é uma árvore de abrangência de G
 0  Voltar
 """
         )
@@ -456,6 +457,24 @@ def operations_menu(g: Graph) -> None:
             except ValueError as e:
                 print(f"Erro: {e}")
         elif op == "24":
+            try:
+                st = g.find_spanning_tree()
+                print("Árvore de Abrangência(lista de adjacência):")
+                for vtx, neigh in st.adjacency_list().items():
+                    print(f"{vtx}: {', '.join(neigh)}")
+                k = int(input("Insira quantas outras Árvores de Abrangência deseja encontrar(0 para sair): ").strip())
+                if k>0:
+                    kst = []
+                    kst = g.k_spanning_trees(st, k)
+                    for i,t in enumerate(kst):
+                        print(f"Árvore de Abrangência {i+2}:")
+                        for vtx, neigh in t.adjacency_list().items():
+                            print(f"{vtx}: {', '.join(neigh)}")
+                    if len(kst) < k:
+                        print("Não há mais Árvores de Abrangência")
+            except ValueError as e:
+                print(f"Erro: {e}")
+        elif op == "25":
             print("Insira a árvore A1 para verificar se é subgrafo de G.")
             a1 = load_graph_menu()
             if a1:
@@ -463,7 +482,7 @@ def operations_menu(g: Graph) -> None:
                     print("Sim, A1 é uma árvore que é subgrafo de G.")
                 else:
                     print("Não, A1 não é uma árvore que é subgrafo de G.")
-        elif op == "25":
+        elif op == "26":
             print("Insira a árvore A1 para verificar se é uma árvore de abrangência de G.")
             a1 = load_graph_menu()
             if a1:
