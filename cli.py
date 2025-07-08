@@ -260,8 +260,14 @@ def load_graph_menu() -> Optional[Graph]:
 # ======================================================================#
 
 
+def _clear_screen() -> None:
+    """Limpa o terminal (Windows: cls, Unix: clear)."""
+    os.system("cls" if os.name == "nt" else "clear")
+
+
 def operations_menu(g: Graph) -> None:
     while True:
+        _clear_screen()
         print(
             """
 --- OPERACOES ---
@@ -286,8 +292,10 @@ def operations_menu(g: Graph) -> None:
 19 Encontrar CENTRO(S) da árvore
 20 Calcular excentricidade dos vértices da árvore
 21 Determinar raio da árvore
-22 Verificar se A1 é uma árvore subgrafo de G
-23 Verificar se A1 é uma árvore de abrangência de G
+22 Distância ENTRE duas ÁRVORES do grafo
+23 Gerar ÁRVORE CENTRAL do grafo
+24 Verificar se A1 é uma árvore subgrafo de G
+25 Verificar se A1 é uma árvore de abrangência de G
 0  Voltar
 """
         )
@@ -421,6 +429,34 @@ def operations_menu(g: Graph) -> None:
             except ValueError as e:
                 print(f"Erro: {e}")
         elif op == "22":
+            print("Insira a PRIMEIRA árvore (A1).")
+            t1 = load_graph_menu()
+            if not t1 or not t1.is_tree():
+                print("A1 inválida ou não é árvore.")
+                continue
+            print("Insira a SEGUNDA árvore (A2).")
+            t2 = load_graph_menu()
+            if not t2 or not t2.is_tree():
+                print("A2 inválida ou não é árvore.")
+                continue
+            try:
+                dist = g.distance_between_trees(t1, t2)
+                if dist is None:
+                    print("As árvores estão desconexas no grafo.")
+                else:
+                    print(f"Distância mínima entre A1 e A2: {dist}")
+            except ValueError as e:
+                print(f"Erro: {e}")
+        elif op == "23":
+            try:
+                ct = g.central_tree()
+                print("Árvore central (lista de adjacência):")
+                for vtx, neigh in ct.adjacency_list().items():
+                    print(f"{vtx}: {', '.join(neigh)}")
+            except ValueError as e:
+                print(f"Erro: {e}")
+
+        elif op == "24":
             print("Insira a árvore A1 para verificar se é subgrafo de G.")
             a1 = load_graph_menu()
             if a1:
@@ -428,7 +464,7 @@ def operations_menu(g: Graph) -> None:
                     print("Sim, A1 é uma árvore que é subgrafo de G.")
                 else:
                     print("Não, A1 não é uma árvore que é subgrafo de G.")
-        elif op == "23":
+        elif op == "25":
             print("Insira a árvore A1 para verificar se é uma árvore de abrangência de G.")
             a1 = load_graph_menu()
             if a1:
@@ -439,6 +475,9 @@ def operations_menu(g: Graph) -> None:
         else:
             print("Opção inválida!")
         print()  # separador
+        # Pausa antes de reexibir o menu (exceto quando a escolha foi voltar)
+        if op != "0":
+            input("\nPressione Enter para voltar ao menu...")
 
 
 # ======================================================================#
@@ -448,9 +487,10 @@ def operations_menu(g: Graph) -> None:
 
 def interactive_menu() -> None:
     graph: Optional[Graph] = None
-    print_banner()
 
     while True:
+        _clear_screen()
+        print_banner()
         print(
             """
 ====================  MENU PRINCIPAL  ====================
@@ -469,6 +509,7 @@ def interactive_menu() -> None:
             break
         elif cmd == "4":
             print_help()
+            input("\nPressione Enter para voltar ao menu...")
             continue
         elif cmd == "1":
             graph = load_graph_menu()
@@ -490,6 +531,7 @@ def interactive_menu() -> None:
             print("\n--- Lista de adjacência ---")
             for v, neigh in graph.adjacency_list().items():
                 print(f"{v}: {', '.join(neigh)}")
+            input("\nPressione Enter para voltar ao menu...")
 
         # --- Operações -------------------------------------------------
         elif cmd == "3":
