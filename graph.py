@@ -424,3 +424,16 @@ class Graph:
             return False
 
         return tree_a1.is_subgraph_of(self) 
+    
+    def is_spanning_tree(self, tree_a1: "Graph") -> bool:
+        """
+        Verifica se 'tree_a1' é uma árvore de abrangência 
+            Para ser uma árvore de abrangência, A1 deve ser:
+            1. Uma árvore.
+            2. Um subgrafo de G.
+            3. Conter todos os vértices de G.
+        """
+        if not self.is_subgraph_tree(tree_a1):
+            return False
+        
+        return self.V == tree_a1.V
