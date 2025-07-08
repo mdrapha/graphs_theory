@@ -385,3 +385,38 @@ class Graph:
             leaves = next_leaves
 
         return sorted(list(g_copy.V))
+
+    def vertex_eccentricities(self) -> Dict[Vertex, int]:
+        """Calcula a excentricidade de cada vértice da árvore."""
+        if not self.is_tree():
+            raise ValueError("A excentricidade está definida apenas para árvores.")
+
+        def bfs(start: Vertex) -> Dict[Vertex, int]:
+            visited = {start}
+            queue = [(start, 0)]
+            dist = {start: 0}
+            while queue:
+                u, d = queue.pop(0)
+                for v in self.adj[u]:
+                    if v not in visited:
+                        visited.add(v)
+                        dist[v] = d + 1
+                        queue.append((v, d + 1))
+            return dist
+
+        ecc = {}
+        for v in self.V:
+            distancias = bfs(v)
+            ecc[v] = max(distancias.values())
+        return ecc
+
+    def radius(self) -> int:
+        """Retorna o raio da árvore: a menor excentricidade entre os vértices."""
+        if not self.is_tree():
+            raise ValueError("O raio está definido apenas para árvores.")
+        
+        ecc = self.vertex_eccentricities()
+        return min(ecc.values())
+
+
+    

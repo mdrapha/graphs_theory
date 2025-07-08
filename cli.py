@@ -284,6 +284,8 @@ def operations_menu(g: Graph) -> None:
 17  Procurar ciclo Hamiltoniano
 18  Verificar se é uma ÁRVORE
 19  Encontrar CENTRO(S) da árvore
+20 Calcular excentricidade dos vértices da árvore
+21 Determinar raio da árvore
 0  Voltar
 """
         )
@@ -400,6 +402,20 @@ def operations_menu(g: Graph) -> None:
                     print(f"O centro da árvore é: {centers[0]}")
                 else:
                     print(f"Os centros da árvore são: {', '.join(centers)}")
+            except ValueError as e:
+                print(f"Erro: {e}")
+        elif op == "20":
+            try:
+                ecc = g.vertex_eccentricities()
+                print("Excentricidade dos vértices:")
+                for v, e in sorted(ecc.items()):
+                    print(f"{v}: {e}")
+            except ValueError as e:
+                print(f"Erro: {e}")
+        elif op == "21":
+            try:
+                r = g.radius()
+                print(f"Raio da árvore: {r}")
             except ValueError as e:
                 print(f"Erro: {e}")
         else:
