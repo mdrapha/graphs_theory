@@ -418,6 +418,76 @@ class Graph:
         ecc = self.vertex_eccentricities()
         return min(ecc.values())
 
+    # ------------------------------------------------------------------ #
+    #  Exercício 7 – Árvore de Abrangência                               #
+    # ------------------------------------------------------------------ #
+
+    def find_spanning_tree(self, start: Optional[Vertex] = None) -> "Graph":
+        """Retorna uma árvore de abrangência construída via BFS."""
+        if not self.is_connected():
+            raise ValueError("O grafo precisa ser conectado para possuir árvore de abrangência.")
+
+        if start is None:
+            start = sorted(self.V)[0] 
+
+        visited: Set[Vertex] = {start}
+        queue: List[Vertex] = [start]
+        tree_edges: Set[Edge] = set()
+
+        while queue:
+            u = queue.pop(0)
+            for v in sorted(self.adj[u]): 
+                if v not in visited:
+                    visited.add(v)
+                    queue.append(v)
+                    tree_edges.add((min(u, v), max(u, v)))
+
+        return Graph(vertices=self.V.copy(), edges=tree_edges)
+
+    def fundamental_cycle(self, edge: Edge) -> list[Edge]:
+        cycle_vertices = self.cycle_containing(edge[0])
+        if not cycle_vertices or len(cycle_vertices) < 2:
+            return None
+
+        edges = []
+        for i in range(len(cycle_vertices)):
+            u = cycle_vertices[i]
+            w = cycle_vertices[(i + 1) % len(cycle_vertices)]  
+            edges.append((min(u, w), max(u, w)))
+
+        return edges
+    
+    def k_spanning_trees(self, base_tree: Graph, k: int) -> list[Graph]:
+        seen = set()
+        results = []
+        queue = []
+        
+        queue.append(base_tree)
+        seen.add(frozenset(base_tree.E))
+
+        while queue and len(results) < k:
+            current = queue.pop(0)
+            current_edges = set(current.E)
+            non_tree_edges = self.E - current_edges
+
+            for e in non_tree_edges:
+                extended_edges = current_edges | {e}
+                temp_graph = Graph(vertices=self.V, edges=extended_edges)
+                cycle = temp_graph.fundamental_cycle(e)
+                
+                for f in cycle:
+                    if f == e:
+                        continue
+                    new_edges = extended_edges - {f}
+                    new_tree = Graph(vertices=self.V, edges=new_edges)
+                    key = frozenset(new_tree.E)
+                    if key not in seen:
+                        seen.add(key)
+                        results.append(new_tree)
+                        queue.append(new_tree)
+                        if len(results) == k:
+                            return results
+        return results
 
     # ------------------------------------------------------------------ #
     #  Exercício 8 – Distância entre duas árvores A1 e A2 em G          #
