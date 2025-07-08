@@ -418,5 +418,9 @@ class Graph:
         ecc = self.vertex_eccentricities()
         return min(ecc.values())
 
+    def is_subgraph_tree(self, tree_a1: "Graph") -> bool:
+        # Verifica se 'tree_a1' é um subgrafo.
+        if not tree_a1.is_tree(): # verificando se é árvore
+            return False
 
-    
+        return tree_a1.is_subgraph_of(self) 
